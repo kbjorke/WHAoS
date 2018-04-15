@@ -9,22 +9,22 @@ import matplotlib.pyplot as plt
 import scipy.special as scpspes
 from itertools import product
 
-def prob_sum(dice_number, sides, target):
-    """
-    Probability to get a sum (target) when rolling a number (dice_number)
-    of a certain dice type (sides).
-    """
-    rollAmount = 0
-    targetAmount = 0
-    for i in product(range(1,sides+1), repeat=dice_number):
-        thisSum = 0
-        rollAmount += 1
-        for j in i:
-            thisSum += j
-        if thisSum == target:
-            targetAmount += 1
-    odds = float(targetAmount) / rollAmount
-    return odds
+#def prob_sum(dice_number, sides, target):
+#    """
+#    Probability to get a sum (target) when rolling a number (dice_number)
+#    of a certain dice type (sides).
+#    """
+#    rollAmount = 0
+#    targetAmount = 0
+#    for i in product(range(1,sides+1), repeat=dice_number):
+#        thisSum = 0
+#        rollAmount += 1
+#        for j in i:
+#            thisSum += j
+#        if thisSum == target:
+#            targetAmount += 1
+#    odds = float(targetAmount) / rollAmount
+#    return odds
 
 def dice_prob(dice_sides):
     """
@@ -32,7 +32,7 @@ def dice_prob(dice_sides):
     """
     return 1.0/dice_sides
 
-def prob_success(dice_sides, target):
+def prob_success(dice_sides, target,rr1=False,rr2=False,rrf=False):
     """
     Probability to get success when rolling a (dice_sides) sided dice
     and requireing to get (target) value or higher.
@@ -40,17 +40,27 @@ def prob_success(dice_sides, target):
     prob = 0
     for i in range(target,dice_sides+1):
         prob += dice_prob(dice_sides)
+
+    if rr1 and target > 1:
+        for i in range(target,dice_sides+1):
+            prob += dice_prob(dice_sides)**2
+    if rr2 and target > 2:
+        for i in range(target,dice_sides+1):
+            prob += 2*dice_prob(dice_sides)*dice_prob(dice_sides)
+    if rrf and target > 1:
+        for i in range(target,dice_sides+1):
+            prob += (dice_sides+1-target)*dice_prob(dice_sides)*dice_prob(dice_sides)
     return prob
 
-def prob_Nsuccess(dice_number, dice_sides, number_success, target):
+def prob_Nsuccess(dice_number, dice_sides, number_success, target,rr1=False,rr2=False,rrf=False):
     """
     Probability to get N (number_success) successes when rolling
     a number of dice (dice_number) that are (dice_sides) sided dice.
     Success is defined as getting (target) value or higher on dice.
     """
     prob = scpspes.binom(dice_number, number_success)
-    prob *= prob_success(dice_sides, target)**(number_success)
-    prob *= (1 - prob_success(dice_sides, target))**(dice_number - number_success)
+    prob *= prob_success(dice_sides, target,rr1,rr2,rrf)**(number_success)
+    prob *= (1 - prob_success(dice_sides, target,rr1,rr2,rrf))**(dice_number - number_success)
     return prob
 
 def prob_fail(dice_sides, target):
@@ -82,14 +92,29 @@ def prob_hits(attacks, to_hit):
     Discrete probabilties for number of hits when making a number 
     of (attacks) with a weapon with a (to_hit) value.
     """
-    return [prob_Nsuccess(attacks,6,x,to_hit) for x in range(0,attacks+1)] 
+    if reroll_hit_1:
+        return [prob_Nsuccess(attacks,6,x,to_hit,rr1=True) for x in range(0,attacks+1)] 
+    if reroll_hit_2:
+        return [prob_Nsuccess(attacks,6,x,to_hit,rr2=True) for x in range(0,attacks+1)] 
+    if reroll_hit_f:
+        return [prob_Nsuccess(attacks,6,x,to_hit,rrf=True) for x in range(0,attacks+1)] 
+    else:
+        return [prob_Nsuccess(attacks,6,x,to_hit) for x in range(0,attacks+1)] 
+
 
 def expec_hits(attacks, to_hit):
     """
     Expectation value for number of hits when making a number
     of (attacks) with a weapon with a (to_hit) value.
     """
-    return attacks*prob_success(6,to_hit)
+    if reroll_hit_1:
+        return attacks*prob_success(6,to_hit,rr1=True)
+    if reroll_hit_2:
+        return attacks*prob_success(6,to_hit,rr2=True)
+    if reroll_hit_f:
+        return attacks*prob_success(6,to_hit,rrf=True)
+    else:
+        return attacks*prob_success(6,to_hit)
 
 def prob_wounds(attacks, to_hit, to_wound):
     """
@@ -238,6 +263,10 @@ to_hit = 4
 to_wound = 3
 damage = 1
 save = 4
+
+reroll_hit_1 = False
+reroll_hit_2 = False
+reroll_hit_f = True 
 
 print prob_hits(attacks, to_hit)
 print expec_hits(attacks, to_hit)
