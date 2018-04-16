@@ -41,14 +41,12 @@ def prob_success(dice_sides, target,rr1=False,rr2=False,rrf=False):
     for i in range(target,dice_sides+1):
         prob += dice_prob(dice_sides)
 
-    if rr1 and target > 1:
-        for i in range(target,dice_sides+1):
+    for i in range(target,dice_sides+1):
+        if rr1 and target > 1:
             prob += dice_prob(dice_sides)**2
-    if rr2 and target > 2:
-        for i in range(target,dice_sides+1):
+        if rr2 and target > 2:
             prob += 2*dice_prob(dice_sides)*dice_prob(dice_sides)
-    if rrf and target > 1:
-        for i in range(target,dice_sides+1):
+        if rrf and target > 1:
             prob += (target-1)*dice_prob(dice_sides)*dice_prob(dice_sides)
     return prob
 
@@ -63,7 +61,7 @@ def prob_Nsuccess(dice_number, dice_sides, number_success, target,rr1=False,rr2=
     prob *= (1 - prob_success(dice_sides, target,rr1,rr2,rrf))**(dice_number - number_success)
     return prob
 
-def prob_fail(dice_sides, target):
+def prob_fail(dice_sides, target,rr1=False,rr2=False,rrf=False):
     """
     Probability to fail when rolling a (dice_sides) sided dice
     and requireing to get (target) value or higher.
@@ -71,9 +69,17 @@ def prob_fail(dice_sides, target):
     prob = 0
     for i in range(1, target):
         prob += dice_prob(dice_sides)
+    
+    for i in range(1, target):
+        if rr1 and target > 1:
+            prob -= dice_prob(dice_sides)**2
+        if rr2 and target > 2:
+            prob -= 2*dice_prob(dice_sides)*dice_prob(dice_sides)
+        if rrf and target > 1:
+            prob -= (target-1)*dice_prob(dice_sides)*dice_prob(dice_sides)
     return prob
 
-def prob_Nfail(dice_number, dice_sides, number_fail, target):
+def prob_Nfail(dice_number, dice_sides, number_fail, target,rr1=False,rr2=False,rrf=False):
     """
     Probability to get N (number_fail) fals when rolling
     a number of dice (dice_number) that are (dice_sides) sided dice.
@@ -83,8 +89,8 @@ def prob_Nfail(dice_number, dice_sides, number_fail, target):
     #prob *= prob_success(dice_sides, target)**(number_success)
     #prob *= (1 - prob_success(dice_sides, target))**(dice_number - number_success)
     prob = scpspes.binom(dice_number, number_fail)
-    prob *= prob_fail(dice_sides, target)**(number_fail)
-    prob *= (1 - prob_fail(dice_sides, target))**(dice_number - number_fail)
+    prob *= prob_fail(dice_sides, target,rr1,rr2,rrf)**(number_fail)
+    prob *= (1 - prob_fail(dice_sides, target,rr1,rr2,rrf))**(dice_number - number_fail)
     return prob
 
 def prob_hits(attacks, to_hit):
@@ -174,7 +180,14 @@ def prob_damage_saves(attacks, to_hit, to_wound, damage, save):
     prob_wnd = prob_wounds(attacks, to_hit, to_wound)
     for i in range(0,len(prob_wnd)):
         for x in range(0,len(prob_wnd)):
-            prob_dmg[i] += prob_wnd[x]*prob_Nfail(x,6,i,save)
+            if reroll_saves_1:
+                prob_dmg[i] += prob_wnd[x]*prob_Nfail(x,6,i,save,rr1=True)
+            elif reroll_saves_2:
+                prob_dmg[i] += prob_wnd[x]*prob_Nfail(x,6,i,save,rr2=True)
+            elif reroll_saves_f:
+                prob_dmg[i] += prob_wnd[x]*prob_Nfail(x,6,i,save,rrf=True)
+            else:
+                prob_dmg[i] += prob_wnd[x]*prob_Nfail(x,6,i,save)
     return prob_dmg
 
 def expec_damage_saves(attacks, to_hit, to_wound, damage, save):
@@ -184,7 +197,14 @@ def expec_damage_saves(attacks, to_hit, to_wound, damage, save):
     value agains enemy with a (save) save value.
     """
     #return damage*expec_hits(attacks, to_hit)*prob_success(6,to_wound)*prob_fail(6,save)
-    return damage*expec_wounds(attacks, to_hit,to_wound)*prob_fail(6,save)
+    if reroll_wound_1:
+        return damage*expec_wounds(attacks, to_hit,to_wound)*prob_fail(6,save,rr1=True)
+    elif reroll_wound_2:
+        return damage*expec_wounds(attacks, to_hit,to_wound)*prob_fail(6,save,rr2=True)
+    elif reroll_wound_f:
+        return damage*expec_wounds(attacks, to_hit,to_wound)*prob_fail(6,save,rrf=True)
+    else:
+        return damage*expec_wounds(attacks, to_hit,to_wound)*prob_fail(6,save)
 
 def prob_damage_saves_intervals(attacks, to_hit, to_wound, damage, save):
     """
@@ -241,16 +261,16 @@ def prob_ranges_damage_saves(attacks, to_hit, to_wound, damage, save):
             while prob_sum < thresholds[i]:
                 next_ind_p = int(exp_dmg_ind+k*direction)
                 if next_ind_p >= 0 and next_ind_p < len(dmg_lst):
-                    prob_range.append(next_ind_p)
-                    prob_sum+=prob_dmg[prob_range[-1]]
+                    prob_range.append(damage*next_ind_p)
+                    prob_sum+=prob_dmg[next_ind_p]
                     print next_ind_p,prob_sum
                 if prob_sum > thresholds[i]:
                     l = 1
                     continue
                 next_ind_m = int(exp_dmg_ind-k*direction)
                 if next_ind_m >= 0 and next_ind_m < len(dmg_lst):
-                    prob_range.append(next_ind_m)
-                    prob_sum+=prob_dmg[prob_range[-1]]
+                    prob_range.append(damage*next_ind_m)
+                    prob_sum+=prob_dmg[next_ind_m]
                     print next_ind_m,prob_sum
                 k += 1
                 #prob_sum = 1
@@ -260,8 +280,8 @@ def prob_ranges_damage_saves(attacks, to_hit, to_wound, damage, save):
             if l == 1:
                 next_ind_m = int(exp_dmg_ind-k*direction)
                 if next_ind_m >= 0 and next_ind_m < len(dmg_lst):
-                    prob_range.append(next_ind_m)
-                    prob_sum+=prob_dmg[prob_range[-1]]
+                    prob_range.append(damage*next_ind_m)
+                    prob_sum+=prob_dmg[next_ind_m]
                     print next_ind_m,prob_sum
                 k += 1
                 l = 0
@@ -289,6 +309,10 @@ reroll_wound_1 = False
 reroll_wound_2 = False
 reroll_wound_f = False
 
+reroll_saves_1 = False
+reroll_saves_2 = False
+reroll_saves_f = False
+
 print prob_hits(attacks, to_hit)
 print expec_hits(attacks, to_hit)
 
@@ -308,8 +332,8 @@ print prob_ranges_damage_saves(attacks, to_hit, to_wound, damage, save)
 dmg_lst = damage_list(attacks, damage)
 p_dmg_svs = prob_damage_saves(attacks, to_hit, to_wound, damage, save)
 
-#plt.bar(dmg_lst, p_dmg_svs, align='center')
-#plt.xlim([dmg_lst[0]-0.5,dmg_lst[-1]+0.5])
+#plt.bar(dmg_lst, p_dmg_svs, width=damage*0.8, align='center')
+#plt.xlim([dmg_lst[0]-0.5*damage,dmg_lst[-1]+0.5*damage])
 #plt.xticks(dmg_lst)
 #plt.show()
 
