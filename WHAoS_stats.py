@@ -49,7 +49,7 @@ def prob_success(dice_sides, target,rr1=False,rr2=False,rrf=False):
             prob += 2*dice_prob(dice_sides)*dice_prob(dice_sides)
     if rrf and target > 1:
         for i in range(target,dice_sides+1):
-            prob += (dice_sides+1-target)*dice_prob(dice_sides)*dice_prob(dice_sides)
+            prob += (target-1)*dice_prob(dice_sides)*dice_prob(dice_sides)
     return prob
 
 def prob_Nsuccess(dice_number, dice_sides, number_success, target,rr1=False,rr2=False,rrf=False):
@@ -109,9 +109,9 @@ def expec_hits(attacks, to_hit):
     """
     if reroll_hit_1:
         return attacks*prob_success(6,to_hit,rr1=True)
-    if reroll_hit_2:
+    elif reroll_hit_2:
         return attacks*prob_success(6,to_hit,rr2=True)
-    if reroll_hit_f:
+    elif reroll_hit_f:
         return attacks*prob_success(6,to_hit,rrf=True)
     else:
         return attacks*prob_success(6,to_hit)
@@ -122,10 +122,18 @@ def prob_wounds(attacks, to_hit, to_wound):
     of (attacks) with a weapon with a (to_hit) value and (to_wound) value.
     """
     phits = prob_hits(attacks, to_hit)
-    prob = [0]*len(phits)
-    for i in range(0,len(phits)):
-        for x in range(0,len(phits)):
-            prob[i] += phits[x]*prob_Nsuccess(x,6,i,to_wound)
+    N = len(phits)
+    prob = [0]*N
+    for i in range(0,N):
+        for x in range(0,N):
+            if reroll_wound_1:
+                prob[i] += phits[x]*prob_Nsuccess(x,6,i,to_wound,rr1=True)
+            elif reroll_wound_2:
+                prob[i] += phits[x]*prob_Nsuccess(x,6,i,to_wound,rr2=True)
+            elif reroll_wound_f:
+                prob[i] += phits[x]*prob_Nsuccess(x,6,i,to_wound,rrf=True)
+            else:
+                prob[i] += phits[x]*prob_Nsuccess(x,6,i,to_wound)
     return prob
 
 def expec_wounds(attacks, to_hit, to_wound):
@@ -133,7 +141,14 @@ def expec_wounds(attacks, to_hit, to_wound):
     Expectation value for number of hits when making a number
     of (attacks) with a weapon with a (to_hit) value.
     """
-    return expec_hits(attacks, to_hit)*prob_success(6,to_wound)
+    if reroll_wound_1:
+        return expec_hits(attacks, to_hit)*prob_success(6,to_wound,rr1=True)
+    elif reroll_wound_2:
+        return expec_hits(attacks, to_hit)*prob_success(6,to_wound,rr2=True)
+    elif reroll_wound_f:
+        return expec_hits(attacks, to_hit)*prob_success(6,to_wound,rrf=True)
+    else:
+        return expec_hits(attacks, to_hit)*prob_success(6,to_wound)
 
 def damage_list(attacks, damage):
     """
@@ -145,7 +160,8 @@ def expec_damage(attacks, to_hit, to_wound, damage):
     Expectation damage when making a number of (attacks) 
     with a weapon with a (to_hit) value.
     """
-    return damage*expec_hits(attacks, to_hit)*prob_success(6,to_wound)
+    #return damage*expec_hits(attacks, to_hit)*prob_success(6,to_wound)
+    return damage*expec_wounds(attacks, to_hit, to_wound)
 
 def prob_damage_saves(attacks, to_hit, to_wound, damage, save):
     """
@@ -167,7 +183,8 @@ def expec_damage_saves(attacks, to_hit, to_wound, damage, save):
     a weapon with a (to_hit) hit value and a (to_wound) wound 
     value agains enemy with a (save) save value.
     """
-    return damage*expec_hits(attacks, to_hit)*prob_success(6,to_wound)*prob_fail(6,save)
+    #return damage*expec_hits(attacks, to_hit)*prob_success(6,to_wound)*prob_fail(6,save)
+    return damage*expec_wounds(attacks, to_hit,to_wound)*prob_fail(6,save)
 
 def prob_damage_saves_intervals(attacks, to_hit, to_wound, damage, save):
     """
@@ -266,7 +283,11 @@ save = 4
 
 reroll_hit_1 = False
 reroll_hit_2 = False
-reroll_hit_f = True 
+reroll_hit_f = False
+
+reroll_wound_1 = False
+reroll_wound_2 = False
+reroll_wound_f = False
 
 print prob_hits(attacks, to_hit)
 print expec_hits(attacks, to_hit)
