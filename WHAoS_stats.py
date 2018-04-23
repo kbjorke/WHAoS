@@ -9,22 +9,6 @@ import matplotlib.pyplot as plt
 import scipy.special as scpspes
 from itertools import product
 
-#def prob_sum(dice_number, sides, target):
-#    """
-#    Probability to get a sum (target) when rolling a number (dice_number)
-#    of a certain dice type (sides).
-#    """
-#    rollAmount = 0
-#    targetAmount = 0
-#    for i in product(range(1,sides+1), repeat=dice_number):
-#        thisSum = 0
-#        rollAmount += 1
-#        for j in i:
-#            thisSum += j
-#        if thisSum == target:
-#            targetAmount += 1
-#    odds = float(targetAmount) / rollAmount
-#    return odds
 
 def dice_prob(dice_sides):
     """
@@ -38,16 +22,21 @@ def prob_success(dice_sides, target,rr1=False,rr2=False,rrf=False):
     and requireing to get (target) value or higher.
     """
     prob = 0
-    for i in range(target,dice_sides+1):
-        prob += dice_prob(dice_sides)
+    if target <= 1:
+        prob = 1
+    elif target > 6:
+        prob = 0
+    else:
+        for i in range(target,dice_sides+1):
+            prob += dice_prob(dice_sides)
 
-    for i in range(target,dice_sides+1):
-        if rr1 and target > 1:
-            prob += dice_prob(dice_sides)**2
-        if rr2 and target > 2:
-            prob += 2*dice_prob(dice_sides)*dice_prob(dice_sides)
-        if rrf and target > 1:
-            prob += (target-1)*dice_prob(dice_sides)*dice_prob(dice_sides)
+        for i in range(target,dice_sides+1):
+            if rr1 and target > 1:
+                prob += dice_prob(dice_sides)**2
+            if rr2 and target > 2:
+                prob += 2*dice_prob(dice_sides)*dice_prob(dice_sides)
+            if rrf and target > 1:
+                prob += (target-1)*dice_prob(dice_sides)*dice_prob(dice_sides)
     return prob
 
 def prob_Nsuccess(dice_number, dice_sides, number_success, target,rr1=False,rr2=False,rrf=False):
@@ -56,9 +45,20 @@ def prob_Nsuccess(dice_number, dice_sides, number_success, target,rr1=False,rr2=
     a number of dice (dice_number) that are (dice_sides) sided dice.
     Success is defined as getting (target) value or higher on dice.
     """
-    prob = scpspes.binom(dice_number, number_success)
-    prob *= prob_success(dice_sides, target,rr1,rr2,rrf)**(number_success)
-    prob *= (1 - prob_success(dice_sides, target,rr1,rr2,rrf))**(dice_number - number_success)
+    if target <= 1:
+        if number_success == dice_number:
+            prob = 1
+        else:
+            prob = 0
+    elif target > 6:
+        if number_success == 0:
+            prob = 1
+        else:
+            prob = 0
+    else:
+        prob = scpspes.binom(dice_number, number_success)
+        prob *= prob_success(dice_sides, target,rr1,rr2,rrf)**(number_success)
+        prob *= (1 - prob_success(dice_sides, target,rr1,rr2,rrf))**(dice_number - number_success)
     return prob
 
 def prob_fail(dice_sides, target,rr1=False,rr2=False,rrf=False):
@@ -67,16 +67,21 @@ def prob_fail(dice_sides, target,rr1=False,rr2=False,rrf=False):
     and requireing to get (target) value or higher.
     """
     prob = 0
-    for i in range(1, target):
-        prob += dice_prob(dice_sides)
-    
-    for i in range(1, target):
-        if rr1 and target > 1:
-            prob -= dice_prob(dice_sides)**2
-        if rr2 and target > 2:
-            prob -= 2*dice_prob(dice_sides)*dice_prob(dice_sides)
-        if rrf and target > 1:
-            prob -= (target-1)*dice_prob(dice_sides)*dice_prob(dice_sides)
+    if target <= 1:
+        prob = 0
+    elif target > 6:
+        prob = 1
+    else:
+        for i in range(1, target):
+            prob += dice_prob(dice_sides)
+        
+        for i in range(1, target):
+            if rr1 and target > 1:
+                prob -= dice_prob(dice_sides)**2
+            if rr2 and target > 2:
+                prob -= 2*dice_prob(dice_sides)*dice_prob(dice_sides)
+            if rrf and target > 1:
+                prob -= (target-1)*dice_prob(dice_sides)*dice_prob(dice_sides)
     return prob
 
 def prob_Nfail(dice_number, dice_sides, number_fail, target,rr1=False,rr2=False,rrf=False):
@@ -85,12 +90,20 @@ def prob_Nfail(dice_number, dice_sides, number_fail, target,rr1=False,rr2=False,
     a number of dice (dice_number) that are (dice_sides) sided dice.
     Success is defined as getting (target) value or higher on dice.
     """
-    #prob = scpspes.binom(dice_number, number_success)
-    #prob *= prob_success(dice_sides, target)**(number_success)
-    #prob *= (1 - prob_success(dice_sides, target))**(dice_number - number_success)
-    prob = scpspes.binom(dice_number, number_fail)
-    prob *= prob_fail(dice_sides, target,rr1,rr2,rrf)**(number_fail)
-    prob *= (1 - prob_fail(dice_sides, target,rr1,rr2,rrf))**(dice_number - number_fail)
+    if target <= 1:
+        if number_fail == 0:
+            prob = 1
+        else:
+            prob = 0
+    elif target > 6:
+        if number_fail == dice_number:
+            prob = 1
+        else:
+            prob = 0
+    else:
+        prob = scpspes.binom(dice_number, number_fail)
+        prob *= prob_fail(dice_sides, target,rr1,rr2,rrf)**(number_fail)
+        prob *= (1 - prob_fail(dice_sides, target,rr1,rr2,rrf))**(dice_number - number_fail)
     return prob
 
 def prob_hits(attacks, to_hit):
@@ -276,7 +289,11 @@ def prob_ranges_damage_saves(attacks, to_hit, to_wound, damage, save):
                 #prob_sum = 1
             print prob_range,prob_sum
             #prob_range_label = "%d-%d" % (np.sort(prob_range[-2:])[0],np.sort(prob_range[-2:])[1])
-            prob_range_label = "%d-%d" % (np.sort(prob_range[-3:-1])[0],np.sort(prob_range[-3:-1])[1])
+            if  np.size(prob_range) == 1:
+                prob_range_label = "%d-%d" % (prob_range[0],prob_range[0])
+            else:
+                prob_range_label = "%d-%d" % (np.sort(prob_range[-3:-1])[0],np.sort(prob_range[-3:-1])[1])
+
             if l == 1:
                 next_ind_m = int(exp_dmg_ind-k*direction)
                 if next_ind_m >= 0 and next_ind_m < len(dmg_lst):
@@ -300,6 +317,7 @@ to_hit = 4
 to_wound = 3
 damage = 1
 save = 4
+rend = -1
 
 reroll_hit_1 = False
 reroll_hit_2 = False
@@ -322,11 +340,11 @@ print expec_wounds(attacks, to_hit, to_wound)
 print damage_list(attacks, damage)
 print expec_damage(attacks, to_hit, to_wound, damage)
 
-print prob_damage_saves(attacks, to_hit, to_wound, damage, save)
-print expec_damage_saves(attacks, to_hit, to_wound, damage, save)
+print prob_damage_saves(attacks, to_hit, to_wound, damage, save+rend)
+print expec_damage_saves(attacks, to_hit, to_wound, damage, save+rend)
 
-print prob_damage_saves_intervals(attacks, to_hit, to_wound, damage, save)
-print prob_ranges_damage_saves(attacks, to_hit, to_wound, damage, save)
+print prob_damage_saves_intervals(attacks, to_hit, to_wound, damage, save+rend)
+print prob_ranges_damage_saves(attacks, to_hit, to_wound, damage, save+rend)
 
 
 dmg_lst = damage_list(attacks, damage)
