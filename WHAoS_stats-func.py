@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 import scipy.special as scpspes
 from itertools import product
 
+
 def dice_prob(dice_sides):
     """
     Probability for each side of a (dice_sides) sided dice.
@@ -308,82 +309,62 @@ def prob_ranges_damage_saves(attacks, to_hit, to_wound, damage, save):
     return dmg_prob_int
 
 
-class WHAoS_Stats:
-    name = "None"
-    wounds = float('NaN')
-    move = float('NaN')
-    save = float('NaN')
-    bravery = float('NaN')
+char = [2,5,4,6] # Charracteristics: Wounds, Move["], Save[+], Bravery
+wpn_stats = [1,2,4,3,0,1] # Range["], Attacks, To Hit[+], To Wound[+], Rend, Damage
 
-    tot_models = 0
-    tot_wounds = 0
-    
-    weapons = dict()
-    
-    def __init__(self, name, wounds, move, save, bravery):
-        self.name = name
-        self.wounds = wounds
-        self.move = move
-        self.save = save
-        self.bravery = bravery
+attacks = 11
+to_hit = 4
+to_wound = 3
+damage = 1
+save = 4
+rend = 0
 
-    def add_wpn(self, wpn_name, models, wpn_range, attacks, to_hit, to_wound, rend, damage):
-        self.weapons[wpn_name] = [models, wpn_range, attacks, to_hit, to_wound, rend, damage]
-        self.tot_models += models
-        self.tot_wounds += models*self.wounds
+reroll_hit_1 = False
+reroll_hit_2 = False
+reroll_hit_f = False
+
+reroll_wound_1 = False
+reroll_wound_2 = False
+reroll_wound_f = False
+
+reroll_saves_1 = False
+reroll_saves_2 = False
+reroll_saves_f = False
+
+print prob_hits(attacks, to_hit)
+print expec_hits(attacks, to_hit)
+
+print prob_wounds(attacks, to_hit, to_wound)
+print expec_wounds(attacks, to_hit, to_wound)
+
+print damage_list(attacks, damage)
+print expec_damage(attacks, to_hit, to_wound, damage)
+
+print prob_damage_saves(attacks, to_hit, to_wound, damage, save+rend)
+print expec_damage_saves(attacks, to_hit, to_wound, damage, save+rend)
+
+print prob_damage_saves_intervals(attacks, to_hit, to_wound, damage, save+rend)
+print prob_ranges_damage_saves(attacks, to_hit, to_wound, damage, save+rend)
 
 
+dmg_lst = damage_list(attacks, damage)
+p_dmg_svs = prob_damage_saves(attacks, to_hit, to_wound, damage, save)
 
-liberators = WHAoS_Stats("Liberators", 2, 5, 4, 6)
-liberators.add_wpn("Liberator-Prime with Warhammer", 1, 1, 3, 4, 3, 0, 1)
-liberators.add_wpn("Warhammer", 4, 1, 2, 4, 3, 0, 1)
-
-print liberators.weapons
-print liberators.tot_models
-print liberators.tot_wounds
-
-#char = [2,5,4,6] # Charracteristics: Wounds, Move["], Save[+], Bravery
-#wpn_stats = [1,2,4,3,0,1] # Range["], Attacks, To Hit[+], To Wound[+], Rend, Damage
-#
-#attacks = 11
-#to_hit = 4
-#to_wound = 3
-#damage = 1
-#save = 4
-#rend = 0
-#
-#reroll_hit_1 = False
-#reroll_hit_2 = False
-#reroll_hit_f = False
-#
-#reroll_wound_1 = False
-#reroll_wound_2 = False
-#reroll_wound_f = False
-#
-#reroll_saves_1 = False
-#reroll_saves_2 = False
-#reroll_saves_f = False
-#
-#print prob_hits(attacks, to_hit)
-#print expec_hits(attacks, to_hit)
-#
-#print prob_wounds(attacks, to_hit, to_wound)
-#print expec_wounds(attacks, to_hit, to_wound)
-#
-#print damage_list(attacks, damage)
-#print expec_damage(attacks, to_hit, to_wound, damage)
-#
-#print prob_damage_saves(attacks, to_hit, to_wound, damage, save+rend)
-#print expec_damage_saves(attacks, to_hit, to_wound, damage, save+rend)
-#
-#print prob_damage_saves_intervals(attacks, to_hit, to_wound, damage, save+rend)
-#print prob_ranges_damage_saves(attacks, to_hit, to_wound, damage, save+rend)
-#
-#
-#dmg_lst = damage_list(attacks, damage)
-#p_dmg_svs = prob_damage_saves(attacks, to_hit, to_wound, damage, save)
-#
 #plt.bar(dmg_lst, p_dmg_svs, width=damage*0.8, align='center')
 #plt.xlim([dmg_lst[0]-0.5*damage,dmg_lst[-1]+0.5*damage])
 #plt.xticks(dmg_lst)
+#plt.show()
+
+#dmg_lst = damage_list(attacks, damage)
+#dmg_prob =  prob_damage_saves(attacks, to_hit, to_wound, damage, save)
+#dmg_exp_rnd = int(np.round(expec_damage_saves(attacks, to_hit, to_wound, damage, save)))
+#dmg_exp_ind = dmg_lst.index(dmg_exp_rnd)
+
+#print dmg_lst
+#print dmg_exp_rnd,":",dmg_prob[dmg_exp_ind]
+#print dmg_exp_rnd,"+/-",(damage*1),":",np.sum(dmg_prob[max(dmg_exp_ind-1,0):min(dmg_exp_ind+2,(attacks+1))])
+#print dmg_exp_rnd,"+/-",(damage*2),":",np.sum(dmg_prob[max(dmg_exp_ind-2,0):min(dmg_exp_ind+3,(attacks+1))])
+#print dmg_exp_rnd,"+/-",(damage*3),":",np.sum(dmg_prob[max(dmg_exp_ind-3,0):min(dmg_exp_ind+4,(attacks+1))])
+
+#plt.plot(dmg_lst,dmg_prob)
 #plt.show()
