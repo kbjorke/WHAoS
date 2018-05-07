@@ -118,7 +118,11 @@ class WHAoS_Stats:
     tot_wounds = 0
     
     weapons = dict()
+    weapons_dmg_lst = dict()
     dmg_prob_weapons = dict()
+        
+    combined_dmg_lst = [0]
+    dmg_prob_combined = []
     
     reroll_hit_1 = False
     reroll_hit_2 = False
@@ -202,7 +206,7 @@ class WHAoS_Stats:
         else:
             return self.expec_hits(attacks, to_hit)*prob_success(6,to_wound)
     
-    def damage_list(attacks, damage):
+    def damage_list(self, attacks, damage):
         """
         """
         return [x*damage for x in range(0,attacks+1)]
@@ -346,20 +350,37 @@ class WHAoS_Stats:
         self.tot_wounds += models*self.wounds
 
     def calc_dmg_prob_wpn(self):
+        saves = 4
         for wpn_name in self.weapons:
-            print wpn_name
-            print self.weapons[wpn_name]
-            saves = 4
-            print self.prob_damage_saves(self.weapons[wpn_name][0]*self.weapons[wpn_name][2], self.weapons[wpn_name][3], self.weapons[wpn_name][4], self.weapons[wpn_name][5], saves+self.weapons[wpn_name][6])
+            self.weapons_dmg_lst[wpn_name] = self.damage_list(self.weapons[wpn_name][0]*self.weapons[wpn_name][2], self.weapons[wpn_name][6])
+            self.dmg_prob_weapons[wpn_name] = self.prob_damage_saves(self.weapons[wpn_name][0]*self.weapons[wpn_name][2], self.weapons[wpn_name][3], self.weapons[wpn_name][4], self.weapons[wpn_name][6], saves+self.weapons[wpn_name][5])
 
+    def calc_dmg_prob_comb(self):
+        prelim_combined_dmg_lst = [0]
+        prelim_dmg_prob_combined  = [1]
+        self.calc_dmg_prob_wpn()
 
+        for wpn_name in self.weapons:
+            prelim_combined_dmg_lst = [dmg1+dmg2 for dmg2 in self.weapons_dmg_lst[wpn_name] for dmg1 in prelim_combined_dmg_lst]
+            prelim_dmg_prob_combined = [prob1*prob2 for prob2 in self.dmg_prob_weapons[wpn_name] for prob1 in prelim_dmg_prob_combined]
+        
+        index_list = [list(set(prelim_combined_dmg_lst)).index(dmg) for dmg in prelim_combined_dmg_lst]
+        self.combined_dmg_lst = list(set(prelim_combined_dmg_lst))
+        self.dmg_prob_combined = [0]*len(self.combined_dmg_lst)
+
+        for ind in range(len(self.combined_dmg_lst)):
+            self.dmg_prob_combined[ind] = sum([prelim_dmg_prob_combined[i] for i in [i for i, x in enumerate(index_list) if x == ind]])
+
+        print self.combined_dmg_lst
+        print self.dmg_prob_combined
 
 
 liberators = WHAoS_Stats("Liberators", 2, 5, 4, 6)
 liberators.add_wpn("Liberator-Prime with Warhammer", 1, 1, 3, 4, 3, 0, 1)
 liberators.add_wpn("Warhammer", 4, 1, 2, 4, 3, 0, 1)
 
-liberators.calc_dmg_prob_wpn()
+#liberators.calc_dmg_prob_wpn()
+liberators.calc_dmg_prob_comb()
 
 #char = [2,5,4,6] # Charracteristics: Wounds, Move["], Save[+], Bravery
 #wpn_stats = [1,2,4,3,0,1] # Range["], Attacks, To Hit[+], To Wound[+], Rend, Damage
