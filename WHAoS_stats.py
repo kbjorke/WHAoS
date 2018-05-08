@@ -254,95 +254,6 @@ class WHAoS_Stats:
             return damage*self.expec_wounds(attacks, to_hit,to_wound)*prob_fail(6,save,rrf=True)
         else:
             return damage*self.expec_wounds(attacks, to_hit,to_wound)*prob_fail(6,save)
-    
-    def prob_damage_saves_intervals(self, attacks, to_hit, to_wound, damage, save):
-        """
-        Returns probabilities for damage intervals.
-        """
-        n_int = 3
-        dmg_lst = self.damage_list(attacks, damage)
-        prob_dmg = self.prob_damage_saves(attacks, to_hit, to_wound, damage, save)
-        exp_dmg = self.expec_damage_saves(attacks, to_hit, to_wound, damage, save)
-        exp_dmg_rnd = int(np.round(exp_dmg))
-        exp_dmg_ind = dmg_lst.index(exp_dmg_rnd)
-        dmg_prob_int = [["",0]]*n_int
-        for i in range(n_int):
-            if i == 0:
-                label="%d" % exp_dmg_rnd
-            else:
-                #label="%d +/- %d" %(exp_dmg_rnd, i*damage)
-                label="%d-%d" %(exp_dmg_rnd-i*damage, exp_dmg_rnd+i*damage)
-            dmg_prob_int[i] = [label, np.sum(self.prob_dmg[max(exp_dmg_ind-i,0):min(exp_dmg_ind+i+1,(attacks+1))])]
-        return dmg_prob_int
-    
-    def prob_ranges_damage_saves(self, attacks, to_hit, to_wound, damage, save):
-        """
-        Returns probabilities for damage intervals.
-        """
-        n_int = 3
-        dmg_lst = self.damage_list(attacks, damage)
-        prob_dmg = self.prob_damage_saves(attacks, to_hit, to_wound, damage, save)
-        exp_dmg = self.expec_damage_saves(attacks, to_hit, to_wound, damage, save)
-        exp_dmg_rnd = int(np.round(exp_dmg))
-        exp_dmg_ind = dmg_lst.index(exp_dmg_rnd)
-        int_labels = ["exp:", "< 68%", "< 95%"]
-        thresholds = [0, 0.68, 0.95]
-        dmg_prob_int = [["",0]]*n_int
-        prob_range_label = ""
-        prob_range = []
-        prob_sum = 0
-        direction = np.sign(exp_dmg-exp_dmg_rnd)
-        if direction == 0:
-            direction = np.sign(prob_dmg[exp_dmg_ind+1]-prob_dmg[exp_dmg_ind-1])
-        print direction
-        k = 0
-        l = 0
-        for i in range(n_int):
-            if i == 0:
-                label="%s %d%s" % (int_labels[i], np.round(100*prob_dmg[exp_dmg_ind]), "%")
-                prob_range_label = "%d" % exp_dmg_rnd
-                prob_range.append(exp_dmg_rnd)
-                prob_sum += prob_dmg[exp_dmg_ind]
-                k += 1
-                print prob_sum
-            else:
-                label=int_labels[i]
-                while prob_sum < thresholds[i]:
-                    next_ind_p = int(exp_dmg_ind+k*direction)
-                    if next_ind_p >= 0 and next_ind_p < len(dmg_lst):
-                        prob_range.append(damage*next_ind_p)
-                        prob_sum+=prob_dmg[next_ind_p]
-                        print next_ind_p,prob_sum
-                    if prob_sum > thresholds[i]:
-                        l = 1
-                        continue
-                    next_ind_m = int(exp_dmg_ind-k*direction)
-                    if next_ind_m >= 0 and next_ind_m < len(dmg_lst):
-                        prob_range.append(damage*next_ind_m)
-                        prob_sum+=prob_dmg[next_ind_m]
-                        print next_ind_m,prob_sum
-                    k += 1
-                    #prob_sum = 1
-                print prob_range,prob_sum
-                #prob_range_label = "%d-%d" % (np.sort(prob_range[-2:])[0],np.sort(prob_range[-2:])[1])
-                if  np.size(prob_range) == 1:
-                    prob_range_label = "%d-%d" % (prob_range[0],prob_range[0])
-                else:
-                    prob_range_label = "%d-%d" % (np.sort(prob_range[-3:-1])[0],np.sort(prob_range[-3:-1])[1])
-    
-                if l == 1:
-                    next_ind_m = int(exp_dmg_ind-k*direction)
-                    if next_ind_m >= 0 and next_ind_m < len(dmg_lst):
-                        prob_range.append(damage*next_ind_m)
-                        prob_sum+=prob_dmg[next_ind_m]
-                        print next_ind_m,prob_sum
-                    k += 1
-                    l = 0
-                    
-                
-            dmg_prob_int[i] = [label, prob_range_label]
-    
-        return dmg_prob_int
 
     def add_wpn(self, wpn_name, models, wpn_range, attacks, to_hit, to_wound, rend, damage):
         self.weapons[wpn_name] = [models, wpn_range, attacks, to_hit, to_wound, rend, damage]
@@ -373,6 +284,98 @@ class WHAoS_Stats:
 
         print self.combined_dmg_lst
         print self.dmg_prob_combined
+    
+    def print_dmg_prob_intervals(self):
+        """
+        Returns probabilities for damage intervals.
+        """
+        n_int = 3
+        dmg_lst = self.combined_dmg_lst
+        prob_dmg = self.dmg_prob_combined
+        exp_dmg = sum([dmg_lst[i]*prob_dmg[i] for i in range(len(dmg_lst))])
+        exp_dmg_rnd = int(np.round(exp_dmg))
+        exp_dmg_ind = dmg_lst.index(exp_dmg_rnd)
+        dmg_prob_int = [["",0]]*n_int
+        for i in range(n_int):
+            lower_ind = max(exp_dmg_rnd-i,0)
+            upper_ind = min(exp_dmg_ind+i,(len(dmg_lst)+1))
+            if i == 0:
+                label="%d" % exp_dmg_rnd
+            else:
+                #label="%d +/- %d" %(exp_dmg_rnd, i*damage)
+                #label="%d-%d" %(exp_dmg_rnd-i*damage, exp_dmg_rnd+i*damage)
+                label="%d-%d" %(lower_ind, upper_ind)
+                #label="%d-%d" %(dmg_lst[exp_dmg_rnd-i], dmg_lst[exp_dmg_rnd+i])
+            #dmg_prob_int[i] = [label, np.sum(prob_dmg[max(exp_dmg_ind-i,0):min(exp_dmg_ind+i+1,(len(dmg_lst)+1))])]
+            dmg_prob_int[i] = [label, np.sum(prob_dmg[lower_ind:upper_ind+1])]
+        #print dmg_prob_int
+        for label, dmg_prob in dmg_prob_int:
+            print "%s: %.4f%s" %(label.center(5," "), dmg_prob, "%")
+    
+    def print_dmg_prob_ranges(self):
+        """
+        Returns probabilities for damage intervals.
+        """
+        n_int = 3
+        dmg_lst = self.combined_dmg_lst
+        prob_dmg = self.dmg_prob_combined
+        exp_dmg = sum([dmg_lst[i]*prob_dmg[i] for i in range(len(dmg_lst))])
+
+        exp_dmg_rnd = int(np.round(exp_dmg))
+        exp_dmg_ind = dmg_lst.index(exp_dmg_rnd)
+        int_labels = ["exp:", "< 68%", "< 95%"]
+        thresholds = [0, 0.68, 0.95]
+        dmg_prob_int = [["",0]]*n_int
+        prob_range_label = ""
+        prob_range = []
+        prob_sum = 0
+        direction = np.sign(exp_dmg-exp_dmg_rnd)
+        if direction == 0:
+            direction = np.sign(prob_dmg[exp_dmg_ind+1]-prob_dmg[exp_dmg_ind-1])
+        k = 0
+        l = 0
+        for i in range(n_int):
+            if i == 0:
+                label="%s %d%s" % (int_labels[i], np.round(100*prob_dmg[exp_dmg_ind]), "%")
+                prob_range_label = "%d" % exp_dmg_rnd
+                prob_range.append(exp_dmg_rnd)
+                prob_sum += prob_dmg[exp_dmg_ind]
+                k += 1
+            else:
+                label=int_labels[i]
+                while prob_sum < thresholds[i]:
+                    next_ind_p = int(exp_dmg_ind+k*direction)
+                    if next_ind_p >= 0 and next_ind_p < len(dmg_lst):
+                        prob_range.append(dmg_lst[next_ind_p])
+                        prob_sum+=prob_dmg[next_ind_p]
+                    if prob_sum > thresholds[i]:
+                        l = 1
+                        continue
+                    next_ind_m = int(exp_dmg_ind-k*direction)
+                    if next_ind_m >= 0 and next_ind_m < len(dmg_lst):
+                        prob_range.append(dmg_lst[next_ind_m])
+                        prob_sum+=prob_dmg[next_ind_m]
+                    k += 1
+                if  np.size(prob_range) == 1:
+                    prob_range_label = "%d-%d" % (prob_range[0],prob_range[0])
+                else:
+                    prob_range_label = "%d-%d" % (np.sort(prob_range[-3:-1])[0],np.sort(prob_range[-3:-1])[1])
+    
+                if l == 1:
+                    next_ind_m = int(exp_dmg_ind-k*direction)
+                    if next_ind_m >= 0 and next_ind_m < len(dmg_lst):
+                        prob_range.append(damage*next_ind_m)
+                        prob_sum+=prob_dmg[next_ind_m]
+                    k += 1
+                    l = 0
+                    
+                
+            dmg_prob_int[i] = [label, prob_range_label]
+    
+        #return dmg_prob_int
+        #print dmg_prob_int
+        for label, dmg_prob in dmg_prob_int:
+            print "%s: %s" %(label.center(9," "), dmg_prob.center(7," "))
 
 
 liberators = WHAoS_Stats("Liberators", 2, 5, 4, 6)
@@ -381,6 +384,8 @@ liberators.add_wpn("Warhammer", 4, 1, 2, 4, 3, 0, 1)
 
 #liberators.calc_dmg_prob_wpn()
 liberators.calc_dmg_prob_comb()
+liberators.print_dmg_prob_intervals()
+liberators.print_dmg_prob_ranges()
 
 #char = [2,5,4,6] # Charracteristics: Wounds, Move["], Save[+], Bravery
 #wpn_stats = [1,2,4,3,0,1] # Range["], Attacks, To Hit[+], To Wound[+], Rend, Damage
